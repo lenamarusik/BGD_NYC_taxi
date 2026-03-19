@@ -22,7 +22,7 @@ These records were identified using the following logic:
 WHERE trip_distance <= 0
 ```
 
-![Trip distance issue](assets/Screenshot 2026-03-19 at 17.18.51.png)
+![Trip distance issue](assets/trip_distance.png)
 
 ---
 
@@ -44,7 +44,7 @@ Detection logic:
 WHERE fare_amount <= 0
 ```
 
-![Fare amount issue](assets/Screenshot 2026-03-19 at 17.19.16.png)
+![Fare amount issue](assets/fare_amount.png)
 
 ---
 
@@ -64,4 +64,4 @@ Detection logic:
 WHERE tpep_pickup_datetime > tpep_dropoff_datetime
 ```
 
-![Timestamp issue](assets/Screenshot 2026-03-19 at 17.19.53.png)
+![Timestamp issue](assets/timestamp.png)
