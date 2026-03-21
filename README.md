@@ -8,6 +8,9 @@ To build a simple data warehouse with the following layers:
 - silver (cleaned)
 - gold (curated)
 
+## Data Source
+Data source link: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page?
+
 ## Data Scope
 Dataset: NYC Yellow Taxi Trip Records  
 Time range: 2023-01 to 2023-12
