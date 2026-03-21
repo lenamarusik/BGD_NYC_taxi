@@ -66,5 +66,65 @@ WHERE tpep_pickup_datetime > tpep_dropoff_datetime
 
 ![Timestamp issue](../assets/timestamp.png)
 
+## Additional Data Quality Risks
+
+Beyond the detected anomalies in the dataset, several potential risks were identified during the ELT process:
+
+### 1. Large Data Volume (Scalability Risk)
+
+The dataset is relatively large (~8–9 GB), which can lead to:
+- storage limitations (as observed during loading),
+- slower query performance,
+- increased resource usage in local environments.
+
+This highlights the need for efficient storage management and potential use of partitioning or indexing in production systems.
+
+---
+
+### 2. Risk of Duplicate Data Loads
+
+Since data is loaded from external parquet files without strict deduplication logic, there is a risk that:
+- re-running the ingestion script could insert duplicate records,
+- historical data may be duplicated if not properly controlled.
+
+In a production system, this should be handled using:
+- primary keys,
+- deduplication logic,
+- or incremental loading strategies.
+
+---
+
+### 3. Schema Inconsistencies Across Files
+
+Different parquet files may contain:
+- missing columns,
+- differently named fields (e.g. `Airport_fee` vs `airport_fee`),
+- schema evolution over time.
+
+This can lead to ingestion errors or incorrect data mapping, which is why a column normalization step was required in the raw loading process.
+
+---
+
+### 4. Timestamp Quality and Consistency
+
+Timestamp fields may contain:
+- incorrect ordering (pickup after dropoff),
+- inconsistent formats,
+- timezone-related issues.
+
+These problems can significantly affect time-based aggregations in the gold layer.
+
+---
+
+### 5. Impact of Data Cleaning on Aggregations
+
+Filtering invalid records in the silver layer (e.g. removing negative fares or invalid trips) may:
+- slightly change total counts,
+- impact revenue calculations,
+- introduce differences between raw and analytical outputs.
+
+This highlights the importance of clearly defining business rules for data cleaning.
+
+
 
 ---
