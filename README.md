@@ -9,7 +9,7 @@ To build a simple data warehouse with the following layers:
 - gold (curated)
 
 ## Data Source
-Data source link: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page?
+Data source link: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
 
 ## Data Scope
 Dataset: NYC Yellow Taxi Trip Records  
