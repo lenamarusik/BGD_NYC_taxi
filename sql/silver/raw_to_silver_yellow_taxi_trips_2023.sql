@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS silver.yellow_taxi_trips_2023_cleaned;
 
-CREATE TABLE silver.yellow_taxi_trips_2023_cleaned AS
+CREATE TABLE silver.yellow_taxi_trips_2023_cleaned_1 AS
 SELECT
     vendor_id,
     tpep_pickup_datetime,
@@ -25,9 +25,9 @@ SELECT
     source_file,
     load_timestamp,
     DATE(tpep_pickup_datetime) AS pickup_date,
-    EXTRACT(YEAR FROM tpep_pickup_datetime) AS pickup_year,
-    EXTRACT(MONTH FROM tpep_pickup_datetime) AS pickup_month,
-    EXTRACT(EPOCH FROM (tpep_dropoff_datetime - tpep_pickup_datetime)) / 60.0 AS trip_duration_minutes
+    EXTRACT(YEAR FROM tpep_pickup_datetime)::INT AS pickup_year,
+    EXTRACT(MONTH FROM tpep_pickup_datetime)::INT AS pickup_month,
+    (EXTRACT(EPOCH FROM (tpep_dropoff_datetime - tpep_pickup_datetime)) / 60.0)::FLOAT8 AS trip_duration_minutes
 FROM raw.yellow_taxi_trips_2023
 WHERE trip_distance > 0
   AND fare_amount > 0
