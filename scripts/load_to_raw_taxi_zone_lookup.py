@@ -5,7 +5,7 @@ from io import StringIO
 import pandas as pd
 import psycopg2
 
-DATA_DIR = Path("/.../.../...")
+DATA_DIR = Path(os.environ["DATA_DIR"])
 FILES = [DATA_DIR / "taxi_zone_lookup.csv"]
 
 TARGET_COLUMNS = [
