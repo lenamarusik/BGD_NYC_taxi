@@ -4,7 +4,7 @@ CREATE TABLE gold.daily_revenue_2023 AS
 SELECT
     pickup_date,
     COUNT(*) AS total_trips,
-    SUM(total_amount) AS total_revenue,
+    SUM(total_amount)::FLOAT8 AS total_revenue,
     AVG(total_amount)::FLOAT8 AS avg_trip_revenue,
     AVG(trip_distance)::FLOAT8 AS avg_trip_distance,
     AVG(trip_duration_minutes)::FLOAT8 AS avg_trip_duration_minutes
