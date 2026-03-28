@@ -1,6 +1,6 @@
 # BGD_NYC_taxi
 
-Data warehouse project based on NYC Taxi Trip Records from 2023.
+Data warehouse project based on NYC Taxi Trip Records from 2023 and Taxi Zones Lookup Table.
 
 ## Objective
 To build a simple data warehouse with the following layers:
@@ -12,7 +12,7 @@ To build a simple data warehouse with the following layers:
 Data source link: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
 
 ## Data Scope
-Dataset: NYC Yellow Taxi Trip Records  
+Dataset: NYC Yellow Taxi Trip Records + Taxi Zones
 Time range: 2023-01 to 2023-12
 Total data size: approximately 8.8 GB
 
