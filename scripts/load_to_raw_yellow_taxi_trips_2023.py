@@ -5,7 +5,7 @@ from io import StringIO
 import pandas as pd
 import psycopg2
 
-DATA_DIR = Path("/.../.../.../...")
+DATA_DIR = Path(os.environ["DATA_DIR"])
 
 TARGET_COLUMNS = [
     "vendor_id",
