@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS gold.taxi_zone_usage;
 
-CREATE TABLE gold.taxi_zone_usage_full_2023 AS
+CREATE TABLE gold.taxi_zone_usage AS
 WITH pickup_stats AS (
     SELECT
         pulocationid AS locationid,
