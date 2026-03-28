@@ -2,19 +2,21 @@
 
 ### Raw Layer
 
-The raw layer contains data ingested directly from parquet files without any transformations.
+The raw layer contains data ingested directly from parquet files without any transformations (for yellow taxi trips) and csv file named taxi_zone_lookup.
 At this stage, the dataset may include invalid, inconsistent, or incomplete records.
 
-The ingestion process was implemented using a Python script:
+The ingestion process was implemented using a Python scripts:
 
 ```
-scripts/load_to_raw.py
+scripts/load_to_raw_yellow_taxi_trips_2023.py
+scripts/load_to_raw_taxi_zone_lookup.py
 ```
 
-Data is loaded into the table:
+Data is loaded into the tables:
 
 ```
 raw.yellow_taxi_trips_2023
+raw.taxi_zone_lookup
 ```
 
 This layer serves as a reliable source of truth and preserves original data for traceability.
@@ -28,16 +30,18 @@ The silver layer introduces data quality rules and filters out invalid records i
 Transformation logic is implemented in:
 
 ```
-sql/silver/raw_to_silver.sql
+sql/silver/raw_to_silver_yellow_taxi_trips_2023.sql
+sql/silver/raw_to_silver_taxi_trips_2023.sql
 ```
 
 Cleaned data is stored in:
 
 ```
 silver.yellow_taxi_trips_2023_cleaned
+silver.taxi_zone_lookup_cleaned
 ```
 
-The following transformations were applied:
+For yellow_taxi_trips_2023_cleaned table the following transformations were applied:
 
 * Removed records with non-positive trip distance (`trip_distance <= 0`)
 * Removed records with non-positive fare amount (`fare_amount <= 0`)
@@ -49,6 +53,16 @@ The following transformations were applied:
   * `pickup_year`
   * `pickup_month`
   * `trip_duration_minutes`
+  
+For taxi_zone_lookup_cleaned table the following transformations were applied:
+
+* Removed records with missing key fields (`locationid`, `borough`, `zone`)
+* Trimmed whitespace from text columns (`borough`, `zone`, `service_zone`)
+* Standardized column names to lowercase
+* Preserved metadata columns:
+
+  * `source_file`
+  * `load_timestamp`
 
 This step ensures that the dataset is consistent, reliable, and ready for analytical processing.
 
@@ -64,6 +78,7 @@ Transformation scripts:
 sql/gold/silver_to_gold_daily_revenue.sql
 sql/gold/silver_to_gold_monthly_summary.sql
 sql/gold/silver_to_gold_payment_type.sql
+sql/gold/silver_to_gold_taxi_zone_usage.sql
 ```
 
 Output tables:
@@ -72,6 +87,7 @@ Output tables:
 gold.daily_revenue_2023
 gold.monthly_summary_2023
 gold.payment_type_summary_2023
+gold.taxi_zone_usage
 ```
 
 These tables provide:
@@ -97,6 +113,13 @@ These tables provide:
   * Average total and tip amounts
 
 ![Timestamp issue](../assets/gold_data_payment_type_summary.png)
+
+* **taxi_zone_usage**
+
+  * Taxi zone-level summary of pickup and dropoff activity
+  * Total pickup/dropoff counts and associated revenue by zone
+
+![Timestamp issue](../assets/gold_data_taxi_zone_usage.png)
 
 ---
 
