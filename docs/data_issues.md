@@ -68,63 +68,94 @@ WHERE tpep_pickup_datetime > tpep_dropoff_datetime
 
 ## Additional Data Quality Risks
 
-Beyond the detected anomalies in the dataset, several potential risks were identified during the ELT process:
-
-### 1. Large Data Volume (Scalability Risk)
-
-The dataset is relatively large (~8–9 GB), which can lead to:
-- storage limitations (as observed during loading),
-- slower query performance,
-- increased resource usage in local environments.
-
-This highlights the need for efficient storage management and potential use of partitioning or indexing in production systems.
+Beyond the detected anomalies in the dataset, several potential risks were identified across different stages of the ELT process, including ingestion, transformation, data consumption, and scalability.
 
 ---
 
-### 2. Risk of Duplicate Data Loads
+### 1. Data Ingestion Risks
 
-Since data is loaded from external parquet files without strict deduplication logic, there is a risk that:
-- re-running the ingestion script could insert duplicate records,
-- historical data may be duplicated if not properly controlled.
+During the ingestion process, the following risks were identified:
 
-In a production system, this should be handled using:
-- primary keys,
-- deduplication logic,
-- or incremental loading strategies.
+- **Schema inconsistencies across files**: different parquet files may contain missing columns or differently named fields (e.g. `Airport_fee` vs `airport_fee`), leading to incorrect column mapping or data loss.
+- **Missing or incomplete data**: some columns may be absent in certain files, requiring default values (NULLs), which can impact downstream processing.
+- **Risk of duplicate data loads**: re-running ingestion scripts without deduplication logic may result in duplicated records in the raw layer.
 
----
-
-### 3. Schema Inconsistencies Across Files
-
-Different parquet files may contain:
-- missing columns,
-- differently named fields (e.g. `Airport_fee` vs `airport_fee`),
-- schema evolution over time.
-
-This can lead to ingestion errors or incorrect data mapping, which is why a column normalization step was required in the raw loading process.
+These issues were mitigated through column normalization and controlled ingestion logic.
 
 ---
 
-### 4. Timestamp Quality and Consistency
+### 2. Transformation Risks
 
-Timestamp fields may contain:
+During the transformation process (raw → silver), the following risks were identified:
+
+- **Invalid data values**: records with negative or zero trip distance, non-positive fare amounts, or incorrect timestamps (pickup after dropoff).
+- **Impact of data cleaning on aggregations**: removing invalid records improves data quality but may slightly alter total counts and revenue metrics compared to raw data.
+
+Rows number in raw data:
+![Rows number in raw data for yellow taxi trips in 2023:](../assets/raw_data_number_yellow_taxi_trips_2023.png)
+![Rows number in raw data for taxi zone lookup:](../assets/raw_data_number_taxi_zone_lookup.png)
+
+Rows number in silver data:
+![Rows number in silver data for yellow taxi trips in 2023:](../assets/silver_data_number_yellow_taxi_trips_2023.png)
+![Rows number in silver data for taxi zone lookup:](../assets/silver_data_number_taxi_zone_lookup.png)
+
+- **Incorrect data types**: functions such as `EXTRACT()` may produce numeric values instead of integers if not explicitly cast, leading to inconsistencies across layers.
+
+These risks highlight the importance of clearly defined transformation rules and explicit type handling.
+
+---
+
+### 3. Data Consistency and Consumption Risks
+
+In the analytical (gold) layer, potential risks include:
+
+- **Lack of constraints**: without primary keys and NOT NULL constraints, datasets may contain duplicates or NULL values that can distort aggregations.
+- **Null propagation**: missing values in intermediate layers may propagate into aggregated tables if not handled properly.
+- **Inconsistent metric definitions**: differences in aggregation logic across tables may lead to inconsistent analytical results.
+
+These risks were mitigated by introducing primary keys, NOT NULL constraints, and consistent aggregation logic.
+
+---
+
+### 4. Scalability and Performance Risks
+
+Due to the size of the dataset (~8–9 GB), several scalability challenges may arise:
+
+- slower query performance on large datasets,
+- increased memory and storage usage in local environments,
+- potential data type limitations (e.g. using INT instead of BIGINT for large counts).
+
+In production environments, these issues should be addressed through indexing, partitioning, and optimized data types.
+
+---
+
+### 5. Timestamp and Temporal Consistency Risks
+
+Timestamp fields may introduce additional risks:
+
 - incorrect ordering (pickup after dropoff),
 - inconsistent formats,
-- timezone-related issues.
+- potential timezone-related issues.
 
-These problems can significantly affect time-based aggregations in the gold layer.
+These problems can significantly affect time-based aggregations and trend analysis in the gold layer.
 
 ---
 
-### 5. Impact of Data Cleaning on Aggregations
+### 6. Data Sharing and Consumption Risks
 
-Filtering invalid records in the silver layer (e.g. removing negative fares or invalid trips) may:
-- slightly change total counts,
-- impact revenue calculations,
-- introduce differences between raw and analytical outputs.
+In the final (gold) layer, additional risks related to data sharing and usage were identified:
 
-This highlights the importance of clearly defining business rules for data cleaning.
+- **Ambiguity in metric definitions**: without clear documentation, users may misinterpret metrics such as revenue or trip counts.
+- **Lack of standardization**: inconsistent naming conventions or data types across tables may lead to confusion during analysis.
+- **Data accessibility issues**: without proper structuring, aggregated tables may not be easily usable for reporting or BI tools.
+- **Risk of misuse**: users may join or filter data incorrectly if relationships between tables are not clearly defined.
 
+To mitigate these risks, the gold layer was designed to:
+- provide clean, aggregated, and business-ready datasets,
+- enforce consistent naming and data types,
+- include primary keys and NOT NULL constraints,
+- simplify data structures for analytical consumption.
 
+This highlights the importance of designing clear, well-structured, and standardized datasets to ensure reliable data consumption and accurate analytical outcomes.
 
 ---
