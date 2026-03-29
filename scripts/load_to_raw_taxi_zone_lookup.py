@@ -7,7 +7,6 @@ import pandas as pd
 import psycopg2
 
 DATA_DIR = Path(os.environ["DATA_DIR"])
-DATA_DIR = Path(os.environ["DATA_DIR"])
 DB_HOST = os.environ["DB_HOST"]
 DB_PORT = int(os.environ["DB_PORT"])
 DB_NAME = os.environ["DB_NAME"]
