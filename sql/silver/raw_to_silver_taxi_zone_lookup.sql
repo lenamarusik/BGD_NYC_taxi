@@ -25,4 +25,8 @@ SELECT
 FROM raw.taxi_zone_lookup
 WHERE locationid IS NOT NULL
   AND borough IS NOT NULL
-  AND zone IS NOT NULL;
+  AND zone IS NOT NULL
+  AND load_timestamp > (
+        SELECT COALESCE(MAX(load_timestamp), TIMESTAMP '1900-01-01')
+        FROM silver.taxi_zone_lookup_cleaned
+  );
