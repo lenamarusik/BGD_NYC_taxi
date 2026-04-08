@@ -1,6 +1,20 @@
-DROP TABLE IF EXISTS gold.daily_revenue_2023;
+CREATE TABLE IF NOT EXISTS gold.daily_revenue_2023 (
+    pickup_date DATE,
+    total_trips BIGINT,
+    total_revenue FLOAT8,
+    avg_trip_revenue FLOAT8,
+    avg_trip_distance FLOAT8,
+    avg_trip_duration_minutes FLOAT8
+);
 
-CREATE TABLE gold.daily_revenue_2023 AS
+INSERT INTO gold.daily_revenue_2023 (
+    pickup_date,
+    total_trips,
+    total_revenue,
+    avg_trip_revenue,
+    avg_trip_distance,
+    avg_trip_duration_minutes
+)
 SELECT
     pickup_date,
     COUNT(*) AS total_trips,
