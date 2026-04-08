@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS gold.daily_revenue_2023 (
     avg_trip_duration_minutes FLOAT8
 );
 
+TRUNCATE TABLE gold.daily_revenue_2023;
+
 INSERT INTO gold.daily_revenue_2023 (
     pickup_date,
     total_trips,
@@ -25,4 +27,3 @@ SELECT
 FROM silver.yellow_taxi_trips_2023_cleaned
 GROUP BY pickup_date
 ORDER BY pickup_date;
- 
