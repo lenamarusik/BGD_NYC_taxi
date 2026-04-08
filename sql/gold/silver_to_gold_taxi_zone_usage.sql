@@ -1,6 +1,24 @@
-DROP TABLE IF EXISTS gold.taxi_zone_usage;
+CREATE TABLE IF NOT EXISTS gold.taxi_zone_usage (
+    locationid INTEGER,
+    borough TEXT,
+    zone TEXT,
+    service_zone TEXT,
+    total_pickups BIGINT,
+    total_dropoffs BIGINT,
+    pickup_revenue FLOAT8,
+    dropoff_revenue FLOAT8
+);
 
-CREATE TABLE gold.taxi_zone_usage AS
+INSERT INTO gold.taxi_zone_usage (
+    locationid,
+    borough,
+    zone,
+    service_zone,
+    total_pickups,
+    total_dropoffs,
+    pickup_revenue,
+    dropoff_revenue
+)
 WITH pickup_stats AS (
     SELECT
         pulocationid AS locationid,
