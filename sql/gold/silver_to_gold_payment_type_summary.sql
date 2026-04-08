@@ -1,6 +1,18 @@
-DROP TABLE IF EXISTS gold.payment_type_summary_2023;
+CREATE TABLE IF NOT EXISTS gold.payment_type_summary_2023 (
+    payment_type INTEGER,
+    total_trips BIGINT,
+    total_revenue FLOAT8,
+    avg_total_amount FLOAT8,
+    avg_tip_amount FLOAT8
+);
 
-CREATE TABLE gold.payment_type_summary_2023 AS
+INSERT INTO gold.payment_type_summary_2023 (
+    payment_type,
+    total_trips,
+    total_revenue,
+    avg_total_amount,
+    avg_tip_amount
+)
 SELECT
     payment_type,
     COUNT(*) AS total_trips,
