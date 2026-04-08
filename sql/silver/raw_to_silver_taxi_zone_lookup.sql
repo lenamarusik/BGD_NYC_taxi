@@ -1,6 +1,20 @@
-DROP TABLE IF EXISTS silver.taxi_zone_lookup_cleaned;
+CREATE TABLE IF NOT EXISTS silver.taxi_zone_lookup_cleaned (
+    locationid INTEGER,
+    borough TEXT,
+    zone TEXT,
+    service_zone TEXT,
+    source_file TEXT,
+    load_timestamp TIMESTAMP
+);
 
-CREATE TABLE silver.taxi_zone_lookup_cleaned AS
+INSERT INTO silver.taxi_zone_lookup_cleaned (
+    locationid,
+    borough,
+    zone,
+    service_zone,
+    source_file,
+    load_timestamp
+)
 SELECT
     locationid,
     TRIM(borough) AS borough,
