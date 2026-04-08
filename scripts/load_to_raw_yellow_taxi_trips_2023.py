@@ -6,8 +6,8 @@ import os
 import pandas as pd
 import psycopg2
 
-DATA_DIR = Path(os.environ["DATA_DIR"])
-DB_HOST = os.environ["DB_HOST"]
+DATA_DIR = Path(os.environ["DATA_DIR"]
+DB_HOST = os.environ["DB_HOST"])
 DB_PORT = int(os.environ["DB_PORT"])
 DB_NAME = os.environ["DB_NAME"]
 DB_USER = os.environ["DB_USER"]
@@ -76,6 +76,22 @@ print(f"Found {len(FILES)} files")
 
 for i, file_path in enumerate(FILES, start=1):
     print(f"[{i}/{len(FILES)}] Loading {file_path.name}")
+
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT 1
+            FROM raw.yellow_taxi_trips_2023
+            WHERE source_file = %s
+            LIMIT 1;
+            """,
+            (str(file_path),)
+        )
+        exists = cur.fetchone()
+
+    if exists:
+        print(f"Skipping {file_path.name} (already loaded)")
+        continue
 
     df = pd.read_parquet(file_path)
     df = df.rename(columns=RENAME_MAP)
