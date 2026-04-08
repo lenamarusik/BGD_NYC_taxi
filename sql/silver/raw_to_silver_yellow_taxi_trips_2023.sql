@@ -89,4 +89,8 @@ WHERE trip_distance > 0
   AND tpep_pickup_datetime >= TIMESTAMP '2023-01-01'
   AND tpep_pickup_datetime < TIMESTAMP '2024-01-01'
   AND tpep_dropoff_datetime >= TIMESTAMP '2023-01-01'
-  AND tpep_dropoff_datetime < TIMESTAMP '2024-01-01';
+  AND tpep_dropoff_datetime < TIMESTAMP '2024-01-01'
+  AND load_timestamp > (
+        SELECT COALESCE(MAX(load_timestamp), TIMESTAMP '1900-01-01')
+        FROM silver.yellow_taxi_trips_2023_cleaned
+  );
