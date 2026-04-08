@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS gold.monthly_summary_2023 (
     avg_trip_duration_minutes FLOAT8
 );
 
+TRUNCATE TABLE gold.monthly_summary_2023;
+
 INSERT INTO gold.monthly_summary_2023 (
     pickup_year,
     pickup_month,
