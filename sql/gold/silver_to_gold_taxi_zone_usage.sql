@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS gold.taxi_zone_usage (
     dropoff_revenue FLOAT8
 );
 
+TRUNCATE TABLE gold.taxi_zone_usage;
+
 INSERT INTO gold.taxi_zone_usage (
     locationid,
     borough,
