@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS gold.payment_type_summary_2023 (
     avg_tip_amount FLOAT8
 );
 
+TRUNCATE TABLE gold.payment_type_summary_2023;
+
 INSERT INTO gold.payment_type_summary_2023 (
     payment_type,
     total_trips,
