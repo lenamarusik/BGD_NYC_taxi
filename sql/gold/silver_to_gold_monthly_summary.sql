@@ -1,6 +1,26 @@
-DROP TABLE IF EXISTS gold.monthly_summary_2023;
+CREATE TABLE IF NOT EXISTS gold.monthly_summary_2023 (
+    pickup_year INTEGER,
+    pickup_month INTEGER,
+    total_trips BIGINT,
+    total_revenue FLOAT8,
+    avg_total_amount FLOAT8,
+    avg_fare_amount FLOAT8,
+    avg_tip_amount FLOAT8,
+    avg_trip_distance FLOAT8,
+    avg_trip_duration_minutes FLOAT8
+);
 
-CREATE TABLE gold.monthly_summary_2023 AS
+INSERT INTO gold.monthly_summary_2023 (
+    pickup_year,
+    pickup_month,
+    total_trips,
+    total_revenue,
+    avg_total_amount,
+    avg_fare_amount,
+    avg_tip_amount,
+    avg_trip_distance,
+    avg_trip_duration_minutes
+)
 SELECT
     pickup_year,
     pickup_month,
