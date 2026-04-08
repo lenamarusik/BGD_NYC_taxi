@@ -44,6 +44,22 @@ print(f"Found {len(FILES)} files")
 for i, file_path in enumerate(FILES, start=1):
     print(f"[{i}/{len(FILES)}] Loading {file_path.name}")
 
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT 1
+            FROM raw.taxi_zone_lookup
+            WHERE source_file = %s
+            LIMIT 1;
+            """,
+            (str(file_path),)
+        )
+        exists = cur.fetchone()
+
+    if exists:
+        print(f"Skipping {file_path.name} (already loaded)")
+        continue
+
     df = pd.read_csv(file_path)
     df = df.rename(columns=RENAME_MAP)
 
