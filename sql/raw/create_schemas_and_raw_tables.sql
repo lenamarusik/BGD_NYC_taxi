@@ -1,10 +1,15 @@
+-- =========================
+-- SCHEMAS
+-- =========================
 CREATE SCHEMA IF NOT EXISTS raw;
 CREATE SCHEMA IF NOT EXISTS silver;
 CREATE SCHEMA IF NOT EXISTS gold;
 
-DROP TABLE IF EXISTS raw.taxi_zone_lookup;
 
-CREATE TABLE raw.taxi_zone_lookup (
+-- =========================
+-- RAW: taxi_zone_lookup
+-- =========================
+CREATE TABLE IF NOT EXISTS raw.taxi_zone_lookup (
     locationid INTEGER,
     borough TEXT,
     zone TEXT,
@@ -13,9 +18,11 @@ CREATE TABLE raw.taxi_zone_lookup (
     load_timestamp TIMESTAMP
 );
 
-DROP TABLE IF EXISTS raw.yellow_taxi_trips_2023;
 
-CREATE TABLE raw.yellow_taxi_trips_2023 (
+-- =========================
+-- RAW: yellow_taxi_trips_2023
+-- =========================
+CREATE TABLE IF NOT EXISTS raw.yellow_taxi_trips_2023 (
     vendor_id INTEGER,
     tpep_pickup_datetime TIMESTAMP,
     tpep_dropoff_datetime TIMESTAMP,
