@@ -1,6 +1,7 @@
+from pathlib import Path
 import os
 import subprocess
-from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,15 +19,21 @@ env["PGPASSWORD"] = DB_PASSWORD
 
 
 def run_sql_file(sql_file: Path) -> None:
-    print(f"\nRunning SQL: {sql_file}")
+    print(f"\nRunning SQL file: {sql_file}")
+
     subprocess.run(
         [
             "psql",
-            "-h", DB_HOST,
-            "-p", DB_PORT,
-            "-U", DB_USER,
-            "-d", DB_NAME,
-            "-f", str(sql_file),
+            "-h",
+            DB_HOST,
+            "-p",
+            DB_PORT,
+            "-U",
+            DB_USER,
+            "-d",
+            DB_NAME,
+            "-f",
+            str(sql_file),
         ],
         check=True,
         env=env,
@@ -34,28 +41,37 @@ def run_sql_file(sql_file: Path) -> None:
 
 
 def run_python_file(py_file: Path) -> None:
-    print(f"\nRunning Python: {py_file}")
+    print(f"\nRunning Python file: {py_file}")
+
     subprocess.run(
-        ["python", str(py_file)],
+        [
+            "python",
+            str(py_file),
+        ],
         check=True,
         env=env,
     )
 
 
 def main() -> None:
+    # 1. Create schemas and raw tables
     run_sql_file(BASE_DIR / "sql" / "raw" / "create_schemas_and_raw_tables.sql")
 
+    # 2. Load source files into RAW
     run_python_file(BASE_DIR / "scripts" / "load_to_raw_taxi_zone_lookup.py")
     run_python_file(BASE_DIR / "scripts" / "load_to_raw_yellow_taxi_trips_2023.py")
 
+    # 3. Transform RAW -> SILVER
     run_sql_file(BASE_DIR / "sql" / "silver" / "raw_to_silver_taxi_zone_lookup.sql")
     run_sql_file(BASE_DIR / "sql" / "silver" / "raw_to_silver_yellow_taxi_trips_2023.sql")
 
+    # 4. Transform SILVER -> GOLD
     run_sql_file(BASE_DIR / "sql" / "gold" / "silver_to_gold_daily_revenue.sql")
     run_sql_file(BASE_DIR / "sql" / "gold" / "silver_to_gold_monthly_summary.sql")
     run_sql_file(BASE_DIR / "sql" / "gold" / "silver_to_gold_payment_type_summary.sql")
     run_sql_file(BASE_DIR / "sql" / "gold" / "silver_to_gold_taxi_zone_usage.sql")
 
+    # 5. Add constraints
     run_sql_file(BASE_DIR / "sql" / "gold" / "adding_pk_setting_nn.sql")
 
     print("\nPipeline finished successfully.")
