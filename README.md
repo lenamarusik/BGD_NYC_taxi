@@ -160,9 +160,18 @@ BGD_NYC_taxi/
 
 ## Architecture Diagrams
 
-* Pipeline Architecture: assets/pipeline_architecture.png
-* ERD: assets/ERD.png
-* High Level: assets/HighLevelArchitecture.png
+### Pipeline Architecture
+![Pipeline Architecture](assets/PipelineArchitectureDiagram.png)
+
+---
+
+### High Level Architecture
+![High Level Architecture](assets/HighLevelArchitecture.png)
+
+---
+
+### ERD
+![ERD](assets/ERD.png)
 
 ---
 
