@@ -1,6 +1,8 @@
 from pathlib import Path
+import argparse
 import os
 import subprocess
+from typing import Optional
 
 from dotenv import load_dotenv
 from prefect import flow, task, get_run_logger
@@ -44,49 +46,100 @@ def run_sql_file(sql_file: Path) -> None:
 
 
 @task(name="run-python-file", retries=2, retry_delay_seconds=5)
-def run_python_file(py_file: Path) -> None:
+def run_python_file(
+    py_file: Path,
+    load_type: str,
+    process_month: Optional[str] = None,
+) -> None:
     logger = get_run_logger()
-    logger.info(f"Running Python file: {py_file}")
+    logger.info(
+        f"Running Python file: {py_file} | load_type={load_type} | process_month={process_month}"
+    )
+
+    cmd = [
+        "python",
+        str(py_file),
+        "--load-type",
+        load_type,
+    ]
+
+    if process_month:
+        cmd.extend(["--process-month", process_month])
 
     subprocess.run(
-        [
-            "python",
-            str(py_file),
-        ],
+        cmd,
         check=True,
         env=env,
     )
 
 
 @task(name="run-spark-file", retries=2, retry_delay_seconds=5)
-def run_spark_file(py_file: Path) -> None:
+def run_spark_file(
+    py_file: Path,
+    load_type: str,
+    process_month: Optional[str] = None,
+) -> None:
     logger = get_run_logger()
-    logger.info(f"Running Spark file: {py_file}")
+    logger.info(
+        f"Running Spark file: {py_file} | load_type={load_type} | process_month={process_month}"
+    )
+
+    cmd = [
+        "spark-submit",
+        str(py_file),
+        "--load-type",
+        load_type,
+    ]
+
+    if process_month:
+        cmd.extend(["--process-month", process_month])
 
     subprocess.run(
-        [
-            "spark-submit",
-            str(py_file),
-        ],
+        cmd,
         check=True,
         env=env,
     )
 
 
 @flow(name="taxi-data-pipeline")
-def taxi_pipeline() -> None:
+def taxi_pipeline(
+    load_type: str = "full",
+    process_month: Optional[str] = None,
+) -> None:
     logger = get_run_logger()
-    logger.info("Starting taxi data pipeline")
+    logger.info(
+        f"Starting taxi data pipeline | load_type={load_type} | process_month={process_month}"
+    )
+
+    if load_type not in {"full", "incremental"}:
+        raise ValueError("load_type must be 'full' or 'incremental'")
+
+    if load_type == "incremental" and not process_month:
+        raise ValueError(
+            "For incremental load you must provide --process-month in format YYYY-MM"
+        )
 
     # 1. Create schemas and raw tables
     run_sql_file(BASE_DIR / "sql" / "raw" / "create_schemas_and_raw_tables.sql")
 
     # 2. Load source files into RAW
-    run_python_file(BASE_DIR / "scripts" / "load_to_raw_taxi_zone_lookup.py")
-    run_python_file(BASE_DIR / "scripts" / "load_to_raw_yellow_taxi_trips_2023.py")
+    run_python_file(
+        BASE_DIR / "scripts" / "load_to_raw_taxi_zone_lookup.py",
+        load_type=load_type,
+        process_month=process_month,
+    )
+    run_python_file(
+        BASE_DIR / "scripts" / "load_to_raw_yellow_taxi_trips_2023.py",
+        load_type=load_type,
+        process_month=process_month,
+    )
 
     # 3. Run scalable Spark processing
-    run_spark_file(BASE_DIR / "spark_jobs" / "yellow_taxi_spark_job.py")
+    run_spark_file(
+        BASE_DIR / "spark_jobs" / "yellow_taxi_spark_job.py",
+        load_type=load_type,
+        process_month=process_month,
+    )
 
     # 4. Transform RAW -> SILVER
     run_sql_file(BASE_DIR / "sql" / "silver" / "raw_to_silver_taxi_zone_lookup.sql")
@@ -104,5 +157,24 @@ def taxi_pipeline() -> None:
     logger.info("Pipeline finished successfully.")
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run taxi data pipeline with Prefect.")
+    parser.add_argument(
+        "--load-type",
+        choices=["full", "incremental"],
+        default="full",
+    )
+    parser.add_argument(
+        "--process-month",
+        required=False,
+        help="Month to process in format YYYY-MM, e.g. 2023-12",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    taxi_pipeline()
+    args = parse_args()
+    taxi_pipeline(
+        load_type=args.load_type,
+        process_month=args.process_month,
+    )
