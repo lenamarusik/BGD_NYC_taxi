@@ -140,6 +140,12 @@ def taxi_pipeline(
     load_type: str = "full",
     process_month: Optional[str] = None,
 ) -> None:
+    """
+    Main pipeline.
+
+    This flow can be scheduled (e.g. via Prefect deployments)
+    to automatically ingest fresh data using Kafka streaming.
+    """    
     logger = get_run_logger()
     logger.info(
         f"Starting pipeline | ingestion_mode={ingestion_mode} | load_type={load_type} | process_month={process_month}"
@@ -182,7 +188,7 @@ def taxi_pipeline(
         )
 
     else:
-        logger.info("Running STREAMING ingestion (Kafka)")
+        logger.info("Triggering streaming ingestion via Kafka (producer -> topic -> consumer)")
 
         run_streaming_producer(process_month=process_month)
         run_streaming_consumer(max_messages=1000)
