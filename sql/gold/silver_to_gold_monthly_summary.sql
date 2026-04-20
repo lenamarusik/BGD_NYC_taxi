@@ -10,8 +10,20 @@ CREATE TABLE IF NOT EXISTS gold.monthly_summary_2023 (
     avg_trip_duration_minutes FLOAT8
 );
 
-TRUNCATE TABLE gold.monthly_summary_2023;
-
+WITH affected_months AS (
+    SELECT DISTINCT pickup_year, pickup_month
+    FROM silver.yellow_taxi_trips_2023_cleaned
+    WHERE pickup_year IS NOT NULL
+      AND pickup_month IS NOT NULL
+),
+deleted_rows AS (
+    DELETE FROM gold.monthly_summary_2023
+    WHERE (pickup_year, pickup_month) IN (
+        SELECT pickup_year, pickup_month
+        FROM affected_months
+    )
+    RETURNING pickup_year, pickup_month
+)
 INSERT INTO gold.monthly_summary_2023 (
     pickup_year,
     pickup_month,
@@ -34,5 +46,9 @@ SELECT
     AVG(trip_distance)::FLOAT8 AS avg_trip_distance,
     AVG(trip_duration_minutes)::FLOAT8 AS avg_trip_duration_minutes
 FROM silver.yellow_taxi_trips_2023_cleaned
+WHERE (pickup_year, pickup_month) IN (
+    SELECT pickup_year, pickup_month
+    FROM affected_months
+)
 GROUP BY pickup_year, pickup_month
 ORDER BY pickup_year, pickup_month;
