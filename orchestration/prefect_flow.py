@@ -189,9 +189,11 @@ def taxi_pipeline(
 
     # -------- PROCESSING (common) --------
 
+    spark_load_type = load_type if ingestion_mode == "batch" else "incremental"
+
     run_spark_file(
         BASE_DIR / "spark_jobs" / "yellow_taxi_spark_job.py",
-        load_type=load_type,
+        load_type=spark_load_type,
         process_month=process_month,
     )
 
