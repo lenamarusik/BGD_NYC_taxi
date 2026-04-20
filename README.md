@@ -52,39 +52,31 @@ The project follows the **Medallion Architecture** (Bronze → Silver → Gold):
 - **Silver**: Cleaned, validated and enriched data
 - **Gold**: Aggregated, business-ready analytical tables
 
-### Data Flow
-
-1. **Ingestion** – Python scripts load CSV + Parquet files into Bronze layer (with idempotency check using `source_file`)
-2. **Spark Processing** – PySpark job performs scalable cleaning, filtering and enrichment, saving result as temporary Parquet file (`yellow_tripdata_*_silver_preview.parquet`)
-3. **RAW → Silver** – SQL scripts transform data from Bronze + use Spark's cleaned Parquet output
-4. **Silver → Gold** – SQL scripts create analytical aggregations (daily revenue, monthly summary, payment type, zone usage)
-5. **Constraints** – Primary keys and NOT NULL constraints are applied on Gold tables
-
-The entire pipeline is **idempotent** and supports both `full` and `incremental` loads.
-
 ---
 
-## Pipeline Orchestration
+### Data Flow
 
-The pipeline is orchestrated using **Prefect** and has a single entry point:
+The pipeline supports **two ingestion modes**:
 
-```
-python orchestration/prefect_flow.py --load-type full
-# or
-python orchestration/prefect_flow.py --load-type incremental --process-month 2023-12
-```
+### 1. Batch ingestion (historical load)
 
-This script executes the pipeline in the correct order:
+1. **Ingestion** – Python scripts load CSV + Parquet files into Bronze layer (with idempotency check using `source_file`)
+2. **Spark Processing** – PySpark job performs scalable cleaning, filtering and enrichment
+3. **RAW → Silver** – SQL transformations
+4. **Silver → Gold** – Aggregations and business logic
 
-* creates schemas and raw tables
-* loads source files into RAW
-* runs the PySpark job
-* transforms RAW to SILVER
-* transforms SILVER to GOLD
-* applies constraints to GOLD tables
+### 2. Streaming ingestion (incremental / fresh data)
 
-This ensures consistent, reproducible end-to-end execution.
+1. **Producer** – reads Parquet data and publishes records to Kafka topic
+2. **Kafka** – acts as a queue system (decoupling ingestion from processing)
+3. **Consumer** – reads messages from Kafka and inserts them into RAW tables
+4. **Spark + SQL** – same processing as batch (Spark + SQL transformations), executed in incremental mode after data is written to RAW
 
+This approach ensures:
+- support for large historical loads (batch)
+- real-time / near-real-time ingestion (streaming)
+- decoupled and scalable architecture
+  
 ---
 
 ## Scalable Processing Engine
@@ -104,6 +96,70 @@ The PySpark job:
 
 This component demonstrates scalable data processing outside the database.
 
+---
+
+## Streaming (Kafka)
+
+The project includes a **streaming ingestion layer** using Apache Kafka.
+
+### Components
+
+- **Producer** (`streaming/producer_yellow_taxi.py`)
+  - reads Parquet files
+  - sends records to Kafka topic
+
+- **Consumer** (`streaming/consumer_yellow_taxi.py`)
+  - reads messages from Kafka
+  - inserts data into `raw.yellow_taxi_trips_2023`
+
+- **Kafka Topic**
+  - acts as a queue system between ingestion and processing
+
+### Purpose
+
+- decoupling ingestion from processing
+- enabling near real-time data ingestion
+- supporting incremental data loads
+
+Batch ingestion remains available for **historical data loading**, while streaming is used for **fresh data ingestion**.
+
+---
+
+## Pipeline Orchestration
+
+The pipeline is orchestrated using **Prefect** and has a single entry point:
+
+### Batch mode
+
+```
+python orchestration/prefect_flow.py --ingestion-mode batch --load-type full
+```
+
+### Or incremental
+
+```
+python orchestration/prefect_flow.py --ingestion-mode batch --load-type incremental --process-month 2023-12
+```
+
+---
+
+### Streaming mode (Kafka)
+
+```
+python orchestration/prefect_flow.py --ingestion-mode streaming --process-month 2023-12
+```
+
+Prefect acts as a **trigger and orchestrator**, executing:
+
+- ingestion (batch or streaming)
+- Spark processing
+- SQL transformations (RAW → SILVER → GOLD)
+- constraints
+
+Streaming ingestion is triggered via Prefect, which orchestrates Kafka producer and consumer as part of the pipeline execution.
+
+---
+
 ### Pipeline Execution
 
 Install dependencies:
@@ -112,30 +168,44 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Run the full pipeline:
+### Run batch pipeline (historical load)
+
 ```
-python orchestration/prefect_flow.py --load-type full
+python orchestration/prefect_flow.py --ingestion-mode batch --load-type full
 ```
 
-Run the pipeline in incremental mode (for a selected month):
+### Run incremental batch
+
 ```
-python orchestration/prefect_flow.py --load-type incremental --process-month 2023-12
+python orchestration/prefect_flow.py --ingestion-mode batch --load-type incremental --process-month 2023-12
+```
+
+### Run streaming pipeline (Kafka)
+
+```
+python orchestration/prefect_flow.py --ingestion-mode streaming --process-month 2023-12
 ```
 
 Requirements:
-- PostgreSQL database running and accessible via environment variables
-- Spark installed and available (spark-submit command)
-- Input data available in the directory defined by DATA_DIR
+- PostgreSQL database running
+- Spark installed (`spark-submit`)
+- Kafka running (`localhost:9092`)
+- Input data available in `DATA_DIR`
 
 ---
 
 ## Incremental Strategy
 
-- **Bronze (RAW)**: File-level deduplication using `source_file` column. Already loaded files are skipped.
-- **Silver**: True incremental load – only records with newer `load_timestamp` are inserted.
-- **Gold**: Hybrid approach:
-  - `daily_revenue_2023` and `monthly_summary_2023` → incremental (DELETE affected dates/months + INSERT)
-  - `payment_type_summary_2023` and `taxi_zone_usage` → full refresh (`DELETE + INSERT`)
+- **Bronze (RAW)**:
+  - batch → file-level deduplication using `source_file`
+  - streaming → continuous ingestion via Kafka
+
+- **Silver**:
+  - incremental load based on `load_timestamp`
+
+- **Gold**:
+  - time-based aggregations → incremental (DELETE affected partitions + INSERT)
+  - global aggregations → full refresh (DELETE + INSERT)
 
 ---
 
@@ -173,6 +243,9 @@ BGD_NYC_taxi/
 │       ├── silver_to_gold_payment_type_summary.sql
 │       ├── silver_to_gold_taxi_zone_usage.sql
 │       └── adding_pk_setting_nn.sql
+├── streaming/                      # Kafka streaming layer
+│   ├── producer_yellow_taxi.py
+│   └── consumer_yellow_taxi.py
 ├── assets/                         # Architecture diagrams
 ├── docs/
 ├── .env.example
@@ -209,6 +282,7 @@ BGD_NYC_taxi/
 
 ## Tech Stack
 
+- **Streaming / Queue**: Apache Kafka
 - **Orchestration**: Prefect
 - **Database**: PostgreSQL
 - **Ingestion**: Python + psycopg2 + pandas
