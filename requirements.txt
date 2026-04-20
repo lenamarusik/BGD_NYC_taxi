@@ -4,3 +4,4 @@ pyarrow
 python-dotenv
 pyspark
 prefect
+kafka-python
