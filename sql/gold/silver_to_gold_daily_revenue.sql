@@ -7,8 +7,19 @@ CREATE TABLE IF NOT EXISTS gold.daily_revenue_2023 (
     avg_trip_duration_minutes FLOAT8
 );
 
-TRUNCATE TABLE gold.daily_revenue_2023;
-
+WITH affected_dates AS (
+    SELECT DISTINCT pickup_date
+    FROM silver.yellow_taxi_trips_2023_cleaned
+    WHERE pickup_date IS NOT NULL
+),
+deleted_rows AS (
+    DELETE FROM gold.daily_revenue_2023
+    WHERE pickup_date IN (
+        SELECT pickup_date
+        FROM affected_dates
+    )
+    RETURNING pickup_date
+)
 INSERT INTO gold.daily_revenue_2023 (
     pickup_date,
     total_trips,
@@ -25,5 +36,9 @@ SELECT
     AVG(trip_distance)::FLOAT8 AS avg_trip_distance,
     AVG(trip_duration_minutes)::FLOAT8 AS avg_trip_duration_minutes
 FROM silver.yellow_taxi_trips_2023_cleaned
+WHERE pickup_date IN (
+    SELECT pickup_date
+    FROM affected_dates
+)
 GROUP BY pickup_date
 ORDER BY pickup_date;
