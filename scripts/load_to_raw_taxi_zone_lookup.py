@@ -1,10 +1,14 @@
 from pathlib import Path
 from datetime import datetime
 from io import StringIO
+import argparse
 import os
 
 import pandas as pd
 import psycopg2
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DATA_DIR = Path(os.environ["DATA_DIR"])
 DB_HOST = os.environ["DB_HOST"]
@@ -31,73 +35,89 @@ RENAME_MAP = {
     "service_zone": "service_zone",
 }
 
-conn = psycopg2.connect(
-    host=DB_HOST,
-    port=DB_PORT,
-    dbname=DB_NAME,
-    user=DB_USER,
-    password=DB_PASSWORD,
-)
 
-print(f"Found {len(FILES)} files")
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--load-type", choices=["full", "incremental"], default="full")
+    parser.add_argument("--process-month", required=False)
+    return parser.parse_args()
 
-for i, file_path in enumerate(FILES, start=1):
-    print(f"[{i}/{len(FILES)}] Loading {file_path.name}")
 
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            SELECT 1
-            FROM raw.taxi_zone_lookup
-            WHERE source_file = %s
-            LIMIT 1;
-            """,
-            (str(file_path),)
-        )
-        exists = cur.fetchone()
+def main() -> None:
+    args = parse_args()
+    print(f"Load type: {args.load_type}")
 
-    if exists:
-        print(f"Skipping {file_path.name} (already loaded)")
-        continue
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+    )
 
-    df = pd.read_csv(file_path)
-    df = df.rename(columns=RENAME_MAP)
+    print(f"Found {len(FILES)} files")
 
-    df["source_file"] = str(file_path)
-    df["load_timestamp"] = datetime.now()
+    for i, file_path in enumerate(FILES, start=1):
+        print(f"[{i}/{len(FILES)}] Loading {file_path.name}")
 
-    for col in TARGET_COLUMNS:
-        if col not in df.columns:
-            df[col] = None
-
-    df = df[TARGET_COLUMNS]
-
-    buffer = StringIO()
-    df.to_csv(buffer, index=False, header=False, sep=",", na_rep="")
-    buffer.seek(0)
-
-    with conn.cursor() as cur:
-        cur.copy_expert(
-            """
-            COPY raw.taxi_zone_lookup (
-                locationid,
-                borough,
-                zone,
-                service_zone,
-                source_file,
-                load_timestamp
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 1
+                FROM raw.taxi_zone_lookup
+                WHERE source_file = %s
+                LIMIT 1;
+                """,
+                (str(file_path),)
             )
-            FROM STDIN WITH (
-                FORMAT CSV,
-                DELIMITER ',',
-                NULL ''
+            exists = cur.fetchone()
+
+        if exists:
+            print(f"Skipping {file_path.name} (already loaded)")
+            continue
+
+        df = pd.read_csv(file_path)
+        df = df.rename(columns=RENAME_MAP)
+
+        df["source_file"] = str(file_path)
+        df["load_timestamp"] = datetime.now()
+
+        for col in TARGET_COLUMNS:
+            if col not in df.columns:
+                df[col] = None
+
+        df = df[TARGET_COLUMNS]
+
+        buffer = StringIO()
+        df.to_csv(buffer, index=False, header=False, sep=",", na_rep="")
+        buffer.seek(0)
+
+        with conn.cursor() as cur:
+            cur.copy_expert(
+                """
+                COPY raw.taxi_zone_lookup (
+                    locationid,
+                    borough,
+                    zone,
+                    service_zone,
+                    source_file,
+                    load_timestamp
+                )
+                FROM STDIN WITH (
+                    FORMAT CSV,
+                    DELIMITER ',',
+                    NULL ''
+                )
+                """,
+                buffer,
             )
-            """,
-            buffer,
-        )
-    conn.commit()
+        conn.commit()
 
-    print(f"Inserted {len(df)} rows from {file_path.name}")
+        print(f"Inserted {len(df)} rows from {file_path.name}")
 
-conn.close()
-print("Done")
+    conn.close()
+    print("Done")
+
+
+if __name__ == "__main__":
+    main()
