@@ -46,26 +46,32 @@ The gold layer supports key analytical use cases such as:
 
 ## Architecture
 
-The project follows a medallion architecture:
+The project follows the **Medallion Architecture** (Bronze → Silver → Gold):
 
-* RAW – ingested data
-* SILVER – cleaned data
-* GOLD – aggregated data
+- **Bronze (RAW)**: Raw ingested data with minimal transformation
+- **Silver**: Cleaned, validated and enriched data
+- **Gold**: Aggregated, business-ready analytical tables
 
-Schemas:
+### Data Flow
 
-* raw
-* silver
-* gold
+1. **Ingestion** – Python scripts load CSV + Parquet files into Bronze layer (with idempotency check using `source_file`)
+2. **Spark Processing** – PySpark job performs scalable cleaning, filtering and enrichment, saving result as temporary Parquet file (`yellow_tripdata_*_silver_preview.parquet`)
+3. **RAW → Silver** – SQL scripts transform data from Bronze + use Spark's cleaned Parquet output
+4. **Silver → Gold** – SQL scripts create analytical aggregations (daily revenue, monthly summary, payment type, zone usage)
+5. **Constraints** – Primary keys and NOT NULL constraints are applied on Gold tables
+
+The entire pipeline is **idempotent** and supports both `full` and `incremental` loads.
 
 ---
 
 ## Pipeline Orchestration
 
-The pipeline is executed from a single entry point:
+The pipeline is orchestrated using **Prefect** and has a single entry point:
 
-```bash
-python pipeline/run_pipeline.py
+```
+python orchestration/prefect_flow.py --load-type full
+# or
+python orchestration/prefect_flow.py --load-type incremental --process-month 2023-12
 ```
 
 This script executes the pipeline in the correct order:
@@ -77,7 +83,7 @@ This script executes the pipeline in the correct order:
 * transforms SILVER to GOLD
 * applies constraints to GOLD tables
 
-This ensures full end-to-end reproducibility.
+This ensures consistent, reproducible end-to-end execution.
 
 ---
 
@@ -85,7 +91,7 @@ This ensures full end-to-end reproducibility.
 
 The project includes a runnable PySpark job:
 
-```bash
+```
 spark-submit spark_jobs/yellow_taxi_spark_job.py
 ```
 
@@ -98,47 +104,49 @@ The PySpark job:
 
 This component demonstrates scalable data processing outside the database.
 
----
-
-## Pipeline Execution
+### Pipeline Execution
 
 Install dependencies:
 
-```bash
+```
 pip install -r requirements.txt
 ```
 
-Run pipeline:
-
-```bash
-python pipeline/run_pipeline.py
+Run the full pipeline:
 ```
+python orchestration/prefect_flow.py --load-type full
+```
+
+Run the pipeline in incremental mode (for a selected month):
+```
+python orchestration/prefect_flow.py --load-type incremental --process-month 2023-12
+```
+
+Requirements:
+- PostgreSQL database running and accessible via environment variables
+- Spark installed and available (spark-submit command)
+- Input data available in the directory defined by DATA_DIR
 
 ---
 
 ## Incremental Strategy
 
-RAW:
-
-* file-level deduplication using source_file
-
-SILVER:
-
-* incremental load using load_timestamp
-
-GOLD:
-
-* full refresh using TRUNCATE + INSERT
+- **Bronze (RAW)**: File-level deduplication using `source_file` column. Already loaded files are skipped.
+- **Silver**: True incremental load – only records with newer `load_timestamp` are inserted.
+- **Gold**: Hybrid approach:
+  - `daily_revenue_2023` and `monthly_summary_2023` → incremental (DELETE affected dates/months + INSERT)
+  - `payment_type_summary_2023` and `taxi_zone_usage` → full refresh (`DELETE + INSERT`)
 
 ---
 
 ## Idempotency
 
-Pipeline can be safely re-run:
+The pipeline is **idempotent** and can be safely re-executed at any time:
 
-* RAW avoids duplicate loads
-* SILVER processes only new data
-* GOLD refreshes consistently
+- No duplicate data is created in Bronze thanks to `source_file` checks.
+- Silver only appends new data based on `load_timestamp`.
+- Gold tables are refreshed using incremental logic for time-based aggregations and full rebuild for global aggregates.
+- Prefect orchestration + task retries ensure reliable execution even after failures.
 
 ---
 
@@ -146,14 +154,30 @@ Pipeline can be safely re-run:
 
 ```
 BGD_NYC_taxi/
-├── assets/
-├── docs/
-├── pipeline/
-├── scripts/
-├── spark_jobs/
+├── orchestration/                  # Prefect orchestration
+│   └── prefect_flow.py
+├── scripts/                        # Ingestion to Bronze layer
+│   ├── load_to_raw_taxi_zone_lookup.py
+│   └── load_to_raw_yellow_taxi_trips_2023.py
+├── spark_jobs/                     # Scalable Spark processing
+│   └── yellow_taxi_spark_job.py
 ├── sql/
-├── README.md
+│   ├── raw/
+│   │   └── create_schemas_and_raw_tables.sql
+│   ├── silver/
+│   │   ├── raw_to_silver_taxi_zone_lookup.sql
+│   │   └── raw_to_silver_yellow_taxi_trips_2023.sql
+│   └── gold/
+│       ├── silver_to_gold_daily_revenue.sql
+│       ├── silver_to_gold_monthly_summary.sql
+│       ├── silver_to_gold_payment_type_summary.sql
+│       ├── silver_to_gold_taxi_zone_usage.sql
+│       └── adding_pk_setting_nn.sql
+├── assets/                         # Architecture diagrams
+├── docs/
+├── .env.example
 ├── requirements.txt
+└── README.md
 ```
 
 ---
@@ -185,9 +209,9 @@ BGD_NYC_taxi/
 
 ## Tech Stack
 
-* PostgreSQL
-* Python
-* Pandas
-* PySpark
-* SQL
-* GitHub
+- **Orchestration**: Prefect
+- **Database**: PostgreSQL
+- **Ingestion**: Python + psycopg2 + pandas
+- **Scalable Processing**: PySpark
+- **Transformations**: SQL (raw → silver → gold)
+- **Environment**: dotenv
