@@ -3,3 +3,4 @@ psycopg2-binary
 pyarrow
 python-dotenv
 pyspark
+prefect
