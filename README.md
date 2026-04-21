@@ -135,7 +135,7 @@ The pipeline is orchestrated using **Prefect** and has a single entry point:
 python orchestration/prefect_flow.py --ingestion-mode batch --load-type full
 ```
 
-### Or incremental
+### Or incremental batch mode
 
 ```
 python orchestration/prefect_flow.py --ingestion-mode batch --load-type incremental --process-month 2023-12
@@ -189,7 +189,7 @@ python orchestration/prefect_flow.py --ingestion-mode streaming --process-month 
 Requirements:
 - PostgreSQL database running
 - Spark installed (`spark-submit`)
-- Kafka running (`localhost:9092`)
+- Kafka running (`localhost:9092`) for streaming mode
 - Input data available in `DATA_DIR`
 
 ---
@@ -260,12 +260,12 @@ BGD_NYC_taxi/
 ---
 
 ### Pipeline Architecture (before Streaming assignment)
-![Pipeline Architecture](assets/PipelineArchitectureDiagram.png)
+![Pipeline Architecture Before Streaming](assets/PipelineArchitectureDiagram.png)
 
 ---
 
 ### Pipeline Architecture (after Streaming assignment)
-![Pipeline Architecture](assets/PipelineArchitectureDiagramWithStreaming.png)
+![Pipeline Architecture After Streaming](assets/PipelineArchitectureDiagramWithStreaming.png)
 
 ---
 
