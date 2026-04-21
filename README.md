@@ -257,8 +257,15 @@ BGD_NYC_taxi/
 
 ## Architecture Diagrams
 
-### Pipeline Architecture
+---
+
+### Pipeline Architecture (before Streaming assignment)
 ![Pipeline Architecture](assets/PipelineArchitectureDiagram.png)
+
+---
+
+### Pipeline Architecture (after Streaming assignment)
+![Pipeline Architecture](assets/PipelineArchitectureDiagramWithStreaming.png)
 
 ---
 
