@@ -1,0 +1,210 @@
+product_name: NYC Yellow Taxi Analytics 2023
+
+product_owner: Lena Marusik
+
+product_purpose: >
+  This data product provides curated analytical tables for NYC Yellow Taxi trips in 2023.
+  It enables analysis of daily and monthly revenue trends, trip volumes, payment behavior,
+  average trip metrics, and taxi activity across NYC zones.
+
+business_context: >
+  The product solves the problem of consuming raw NYC taxi trip files directly.
+  Instead of working with large Parquet and CSV files, users can access clean,
+  aggregated Gold-layer tables in PostgreSQL.
+
+data_sources:
+  - name: NYC Yellow Taxi Trip Records 2023
+    type: Parquet files
+    provider: NYC Taxi & Limousine Commission
+    url: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
+
+  - name: Taxi Zone Lookup Table
+    type: CSV file
+    provider: NYC Taxi & Limousine Commission
+    url: https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
+
+data_lineage:
+  description: >
+    Source files are ingested into the RAW layer, cleaned and enriched in the SILVER layer,
+    and aggregated into business-ready GOLD tables.
+  flow:
+    - NYC TLC Parquet and CSV files
+    - RAW PostgreSQL tables
+    - SILVER cleaned tables
+    - GOLD analytical tables
+    - Data product for analytics users
+
+refresh_frequency:
+  batch_mode: "Manual or scheduled full/incremental load via Prefect"
+  streaming_mode: "Near-real-time ingestion via Kafka, triggered by Prefect"
+  expected_cadence: "Every pipeline run"
+
+access_method:
+  tool: PostgreSQL
+  schema: gold
+  tables:
+    - gold.daily_revenue_2023
+    - gold.monthly_summary_2023
+    - gold.payment_type_summary_2023
+    - gold.taxi_zone_usage
+
+schema:
+  gold.daily_revenue_2023:
+    description: Daily revenue and trip metrics.
+    columns:
+      - name: pickup_date
+        type: DATE
+        description: Date of taxi pickup.
+      - name: total_trips
+        type: BIGINT
+        description: Number of trips on a given day.
+      - name: total_revenue
+        type: FLOAT8
+        description: Total revenue from trips on a given day.
+      - name: avg_trip_revenue
+        type: FLOAT8
+        description: Average revenue per trip.
+      - name: avg_trip_distance
+        type: FLOAT8
+        description: Average trip distance.
+      - name: avg_trip_duration_minutes
+        type: FLOAT8
+        description: Average trip duration in minutes.
+
+  gold.monthly_summary_2023:
+    description: Monthly summary of trips, revenue and average trip metrics.
+    columns:
+      - name: pickup_year
+        type: INTEGER
+        description: Pickup year.
+      - name: pickup_month
+        type: INTEGER
+        description: Pickup month.
+      - name: total_trips
+        type: BIGINT
+        description: Number of trips in the month.
+      - name: total_revenue
+        type: FLOAT8
+        description: Total monthly revenue.
+      - name: avg_total_amount
+        type: FLOAT8
+        description: Average total trip amount.
+      - name: avg_fare_amount
+        type: FLOAT8
+        description: Average fare amount.
+      - name: avg_tip_amount
+        type: FLOAT8
+        description: Average tip amount.
+      - name: avg_trip_distance
+        type: FLOAT8
+        description: Average trip distance.
+      - name: avg_trip_duration_minutes
+        type: FLOAT8
+        description: Average trip duration in minutes.
+
+  gold.payment_type_summary_2023:
+    description: Aggregated taxi trip metrics by payment type.
+    columns:
+      - name: payment_type
+        type: INTEGER
+        description: Payment type code from NYC TLC data.
+      - name: total_trips
+        type: BIGINT
+        description: Number of trips for a given payment type.
+      - name: total_revenue
+        type: FLOAT8
+        description: Total revenue for a given payment type.
+      - name: avg_total_amount
+        type: FLOAT8
+        description: Average total amount for a given payment type.
+      - name: avg_tip_amount
+        type: FLOAT8
+        description: Average tip amount for a given payment type.
+
+  gold.taxi_zone_usage:
+    description: Pickup and dropoff activity by NYC taxi zone.
+    columns:
+      - name: locationid
+        type: INTEGER
+        description: NYC taxi zone identifier.
+      - name: borough
+        type: TEXT
+        description: NYC borough.
+      - name: zone
+        type: TEXT
+        description: Taxi zone name.
+      - name: service_zone
+        type: TEXT
+        description: Service zone category.
+      - name: total_pickups
+        type: BIGINT
+        description: Number of pickups in the zone.
+      - name: total_dropoffs
+        type: BIGINT
+        description: Number of dropoffs in the zone.
+      - name: pickup_revenue
+        type: FLOAT8
+        description: Revenue generated from pickups in the zone.
+      - name: dropoff_revenue
+        type: FLOAT8
+        description: Revenue associated with dropoffs in the zone.
+
+quality_metrics:
+  - metric_name: Completeness of pickup_date
+    definition: Percentage of rows where pickup_date is not null.
+    current_value: "placeholder"
+    expected_threshold: "> 99%"
+    update_cadence: Every pipeline run
+
+  - metric_name: Validity of trip values
+    definition: Percentage of rows with trip_distance > 0, fare_amount > 0 and pickup datetime before dropoff datetime.
+    current_value: "placeholder"
+    expected_threshold: "100%"
+    update_cadence: Every pipeline run
+
+  - metric_name: Row count in daily revenue table
+    definition: Number of rows in gold.daily_revenue_2023.
+    current_value: "placeholder"
+    expected_threshold: "365 rows expected for full 2023 load"
+    update_cadence: Every pipeline run
+
+  - metric_name: Data freshness
+    definition: Time since latest successful load_timestamp.
+    current_value: "placeholder"
+    expected_threshold: "< 1 day after pipeline run"
+    update_cadence: Every pipeline run
+
+known_limitations:
+  - The product covers only NYC Yellow Taxi trips from 2023.
+  - Invalid trips with non-positive distance or fare are removed in the Silver layer.
+  - Payment types are stored as numeric TLC codes, not human-readable labels.
+  - Streaming mode currently consumes a limited number of messages unless max_messages is changed.
+  - Zone-level metrics depend on successful mapping to the Taxi Zone Lookup table.
+
+example_usage:
+  sql: |
+    SELECT
+        pickup_month,
+        total_trips,
+        total_revenue
+    FROM gold.monthly_summary_2023
+    ORDER BY pickup_month;
+
+  python: |
+    import pandas as pd
+    import psycopg2
+
+    conn = psycopg2.connect(
+        host="localhost",
+        port=5432,
+        dbname="your_db",
+        user="your_user",
+        password="your_password"
+    )
+
+    df = pd.read_sql(
+        "SELECT pickup_month, total_revenue FROM gold.monthly_summary_2023 ORDER BY pickup_month",
+        conn
+    )
+
+    print(df.head())
