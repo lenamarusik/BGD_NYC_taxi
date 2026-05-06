@@ -152,25 +152,25 @@ schema:
 quality_metrics:
   - metric_name: Completeness of pickup_date
     definition: Percentage of rows where pickup_date is not null.
-    current_value: "placeholder"
+    current_value: "100.00%"
     expected_threshold: "> 99%"
     update_cadence: Every pipeline run
 
   - metric_name: Validity of trip values
     definition: Percentage of rows with trip_distance > 0, fare_amount > 0 and pickup datetime before dropoff datetime.
-    current_value: "placeholder"
+    current_value: "100.00%"
     expected_threshold: "100%"
     update_cadence: Every pipeline run
 
   - metric_name: Row count in daily revenue table
     definition: Number of rows in gold.daily_revenue_2023.
-    current_value: "placeholder"
+    current_value: "365"
     expected_threshold: "365 rows expected for full 2023 load"
     update_cadence: Every pipeline run
 
   - metric_name: Data freshness
     definition: Time since latest successful load_timestamp.
-    current_value: "placeholder"
+    current_value: "00:27:31.745597"
     expected_threshold: "< 1 day after pipeline run"
     update_cadence: Every pipeline run
 
